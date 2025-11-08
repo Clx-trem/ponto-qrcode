@@ -1,14 +1,52 @@
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ponto Eletrônico QR Code</title>
-<link rel="stylesheet" href="css/style.css">
+
+<!-- CSS Unificado -->
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f5f5f5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+.login-container, .dashboard-container {
+    background-color: #fff;
+    padding: 20px 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    text-align: center;
+}
+input {
+    padding: 10px;
+    margin: 10px 0;
+    width: 80%;
+}
+button {
+    padding: 10px 20px;
+    margin: 5px;
+    cursor: pointer;
+}
+table {
+    width: 100%;
+    margin-top: 10px;
+    border-collapse: collapse;
+}
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+</style>
 
 <!-- Firebase SDK -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCiZXZ9vW-4L471ej9jWg_1MAStD44pTqo",
@@ -21,61 +59,39 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-window.firebaseApp = { db };
+window.firebaseApp = { db, collection, addDoc, getDocs, query, orderBy };
 </script>
+
+<!-- Bibliotecas Externas -->
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
-<div class="login-container">
+
+<!-- LOGIN -->
+<div class="login-container" id="loginDiv">
     <h1>Login</h1>
     <input type="text" id="idInput" placeholder="Digite sua matrícula">
     <input type="text" id="nomeInput" placeholder="Digite seu nome">
     <label><input type="checkbox" id="adminCheckbox"> Login como admin</label>
     <button onclick="login()">Entrar</button>
 </div>
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard - Ponto QR</title>
-<link rel="stylesheet" href="css/style.css">
 
-<!-- Firebase SDK -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyCiZXZ9vW-4L471ej9jWg_1MAStD44pTqo",
-  authDomain: "ponto-qrcode-29f9d.firebaseapp.com",
-  projectId: "ponto-qrcode-29f9d",
-  storageBucket: "ponto-qrcode-29f9d.firebasestorage.app",
-  messagingSenderId: "900058332385",
-  appId: "1:900058332385:web:2ecdabb9b4027bc3748ba0"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-window.firebaseApp = { db };
-</script>
-
-<!-- QR Code Scanner -->
-<script src="https://unpkg.com/html5-qrcode"></script>
-<!-- XLSX -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-</head>
-<body>
-<div class="dashboard-container">
+<!-- DASHBOARD -->
+<div class="dashboard-container" id="dashboardDiv" style="display:none;">
     <h1>Bem-vindo, <span id="nomeUsuario"></span> (ID: <span id="idUsuario"></span>)</h1>
+
     <div id="adminButtons" style="display:none;">
         <button onclick="mostrarTodosColaboradores()">Ver Todos Colaboradores</button>
     </div>
+
     <div id="userButtons">
         <h3>Bater ponto via QR Code</h3>
         <div id="reader" style="width:300px;"></div>
         <div id="status"></div>
         <button onclick="exportarExcel()">Exportar para Excel</button>
     </div>
+
     <h2>Histórico de Pontos</h2>
     <table>
         <thead>
@@ -89,28 +105,40 @@ window.firebaseApp = { db };
         </thead>
         <tbody id="tabelaPontos"></tbody>
     </table>
+
     <button onclick="logout()">Sair</button>
 </div>
-import { collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-firestore.js";
+
+<!-- JS Unificado -->
+<script type="module">
+const loginDiv = document.getElementById('loginDiv');
+const dashboardDiv = document.getElementById('dashboardDiv');
+
 // --- LOGIN ---
-export function login() {
+function login() {
     const id = document.getElementById('idInput').value.trim();
     const nome = document.getElementById('nomeInput').value.trim();
     const admin = document.getElementById('adminCheckbox').checked;
-    if (!id || !nome) { alert('Preencha os campos!'); return; }
+    if(!id || !nome){ alert('Preencha os campos!'); return; }
     localStorage.setItem('usuarioID', id);
     localStorage.setItem('usuarioNome', nome);
-    localStorage.setItem('usuarioAdmin', admin ? 'true' : 'false');
-    window.location.href = 'dashboard.html';
+    localStorage.setItem('usuarioAdmin', admin?'true':'false');
+    iniciarDashboard();
 }
+
 // --- DASHBOARD ---
-document.addEventListener('DOMContentLoaded', async () => {
+async function iniciarDashboard(){
     const id = localStorage.getItem('usuarioID');
     const nome = localStorage.getItem('usuarioNome');
     const admin = localStorage.getItem('usuarioAdmin')==='true';
-    if (!id || !nome) { window.location.href='index.html'; return; }
-    document.getElementById('nomeUsuario').textContent = nome;
-    document.getElementById('idUsuario').textContent = id;
+    if(!id || !nome){ loginDiv.style.display='block'; dashboardDiv.style.display='none'; return; }
+
+    loginDiv.style.display='none';
+    dashboardDiv.style.display='block';
+
+    document.getElementById('nomeUsuario').textContent=nome;
+    document.getElementById('idUsuario').textContent=id;
+
     if(admin){
         document.getElementById('adminButtons').style.display='block';
         document.getElementById('userButtons').style.display='none';
@@ -118,28 +146,31 @@ document.addEventListener('DOMContentLoaded', async () => {
         iniciarScanner();
     }
     await carregarHistorico(admin);
-});
-// --- LOGOUT ---
-export function logout(){
-    localStorage.clear();
-    window.location.href='index.html';
 }
 
-// --- INICIAR SCANNER QR ---
+// --- LOGOUT ---
+function logout(){
+    localStorage.clear();
+    loginDiv.style.display='block';
+    dashboardDiv.style.display='none';
+}
+
+// --- SCANNER QR ---
 function iniciarScanner(){
-    const scanner = new Html5QrcodeScanner("reader", { fps:10, qrbox:250 });
+    const scanner = new Html5QrcodeScanner("reader",{fps:10,qrbox:250});
     scanner.render(onScanSuccess);
 }
 
-// --- REGISTRAR PONTO VIA QR ---
+// --- REGISTRAR PONTO ---
 async function onScanSuccess(decodedText){
     const matricula = decodedText;
     const db = window.firebaseApp.db;
-    const pontosRef = collection(db,'pontos');
+    const pontosRef = window.firebaseApp.collection(db,'pontos');
     const agora = new Date();
-    // tipo será definido baseado no último registro
-    const snapshot = await getDocs(query(pontosRef, orderBy('hora','desc')));
+
+    const snapshot = await window.firebaseApp.getDocs(window.firebaseApp.query(pontosRef, window.firebaseApp.orderBy('hora','desc')));
     const historico = snapshot.docs.map(doc=>doc.data()).filter(r=>r.id===matricula);
+
     let tipo = 'entrada';
     if(historico.length>0){
         const ultimaEntrada = [...historico].reverse().find(r=>r.tipo==='entrada');
@@ -148,35 +179,39 @@ async function onScanSuccess(decodedText){
             tipo='saida';
         }
     }
-    await addDoc(pontosRef,{
+
+    await window.firebaseApp.addDoc(pontosRef,{
         id: matricula,
-        nome: matricula, // pode substituir pelo nome real se tiver cadastro
+        nome: matricula,
         tipo,
         data: agora.toLocaleDateString('pt-BR'),
         hora: agora.toISOString()
     });
+
     document.getElementById('status').innerText=`Ponto ${tipo} registrado para ${matricula} às ${agora.toLocaleTimeString()}`;
     await carregarHistorico();
 }
 
 // --- CARREGAR HISTÓRICO ---
-export async function carregarHistorico(admin=false){
+async function carregarHistorico(admin=false){
     const id = localStorage.getItem('usuarioID');
     const tabela = document.getElementById('tabelaPontos');
     if(!tabela) return;
     const db = window.firebaseApp.db;
-    const pontosRef = collection(db,'pontos');
-    const snapshot = await getDocs(query(pontosRef, orderBy('hora','asc')));
+    const pontosRef = window.firebaseApp.collection(db,'pontos');
+    const snapshot = await window.firebaseApp.getDocs(window.firebaseApp.query(pontosRef, window.firebaseApp.orderBy('hora','asc')));
     let historico = snapshot.docs.map(doc=>doc.data());
     if(!admin) historico = historico.filter(r=>r.id===id);
+
     tabela.innerHTML='';
-    // calcular horas trabalhadas
+
     const registrosPorDia = {};
     historico.forEach(reg=>{
         const key = reg.id+'_'+reg.data;
         if(!registrosPorDia[key]) registrosPorDia[key]=[];
         registrosPorDia[key].push(reg);
     });
+
     for(let key in registrosPorDia){
         const regs = registrosPorDia[key];
         let totalHoras = 0;
@@ -194,15 +229,17 @@ export async function carregarHistorico(admin=false){
 }
 
 // --- EXPORTAR EXCEL ---
-export async function exportarExcel(){
+async function exportarExcel(){
     const admin = localStorage.getItem('usuarioAdmin')==='true';
     const id = localStorage.getItem('usuarioID');
     const db = window.firebaseApp.db;
-    const pontosRef = collection(db,'pontos');
-    const snapshot = await getDocs(query(pontosRef, orderBy('hora','asc')));
+    const pontosRef = window.firebaseApp.collection(db,'pontos');
+    const snapshot = await window.firebaseApp.getDocs(window.firebaseApp.query(pontosRef, window.firebaseApp.orderBy('hora','asc')));
     let historico = snapshot.docs.map(doc=>doc.data());
     if(!admin) historico = historico.filter(r=>r.id===id);
+
     if(historico.length===0){alert('Nenhum ponto registrado!'); return;}
+
     const ws = XLSX.utils.json_to_sheet(historico.map(r=>({
         Colaborador:r.nome,
         Tipo:r.tipo,
@@ -215,9 +252,13 @@ export async function exportarExcel(){
 }
 
 // --- MOSTRAR TODOS COLABORADORES ---
-export async function mostrarTodosColaboradores(){
+async function mostrarTodosColaboradores(){
     await carregarHistorico(true);
 }
-<script type="module" src="js/script.js"></script>
+
+// Inicializa dashboard se já estiver logado
+if(localStorage.getItem('usuarioID')) iniciarDashboard();
+</script>
+
 </body>
 </html>
