@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ponto Eletrônico QR Code</title>
+<title>Ponto Eletrônico QR Code - Versão 3.0</title>
 
-<!-- CSS Unificado -->
+<!-- CSS -->
 <style>
 body {
     font-family: Arial, sans-serif;
     background-color: #f5f5f5;
     display: flex;
     justify-content: center;
-    align-items: center;
-    min-height: 100vh;
+    align-items: flex-start;
+    padding: 20px;
 }
 .login-container, .dashboard-container {
     background-color: #fff;
@@ -21,6 +21,9 @@ body {
     border-radius: 10px;
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     text-align: center;
+    width: 100%;
+    max-width: 1000px;
+    margin-bottom: 20px;
 }
 input {
     padding: 10px;
@@ -41,6 +44,15 @@ th, td {
     border: 1px solid #ddd;
     padding: 8px;
 }
+canvas {
+    max-width: 100%;
+    margin: 20px 0;
+}
+.alert {
+    font-weight: bold;
+}
+.alert.atraso { color: red; }
+.alert.extra { color: green; }
 </style>
 
 <!-- Firebase SDK -->
@@ -62,9 +74,10 @@ const db = getFirestore(app);
 window.firebaseApp = { db, collection, addDoc, getDocs, query, orderBy };
 </script>
 
-<!-- Bibliotecas Externas -->
+<!-- Bibliotecas -->
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -98,17 +111,20 @@ window.firebaseApp = { db, collection, addDoc, getDocs, query, orderBy };
                 <th>Data</th>
                 <th>Hora</th>
                 <th>Horas Trabalhadas</th>
+                <th>Alerta</th>
             </tr>
         </thead>
         <tbody id="tabelaPontos"></tbody>
     </table>
+    <h2>Gráfico de Horas</h2>
+    <canvas id="graficoHoras"></canvas>
     <button onclick="logout()">Sair</button>
 </div>
 
-<!-- JS Unificado -->
 <script type="module">
 const loginDiv = document.getElementById('loginDiv');
 const dashboardDiv = document.getElementById('dashboardDiv');
+let chart = null;
 
 // --- LOGIN ---
 function login() {
@@ -157,17 +173,18 @@ function iniciarScanner(){
     scanner.render(onScanSuccess);
 }
 
-// --- REGISTRAR PONTO ---
+// --- REGISTRAR PONTO COM HORÁRIOS PADRÃO ---
 async function onScanSuccess(decodedText){
     const matricula = decodedText;
     const db = window.firebaseApp.db;
     const pontosRef = window.firebaseApp.collection(db,'pontos');
     const agora = new Date();
 
+    // verifica última entrada/saída
     const snapshot = await window.firebaseApp.getDocs(window.firebaseApp.query(pontosRef, window.firebaseApp.orderBy('hora','desc')));
     const historico = snapshot.docs.map(doc=>doc.data()).filter(r=>r.id===matricula);
 
-    let tipo = 'entrada';
+    let tipo='entrada';
     if(historico.length>0){
         const ultimaEntrada = [...historico].reverse().find(r=>r.tipo==='entrada');
         const ultimaSaida = [...historico].reverse().find(r=>r.tipo==='saida');
@@ -188,7 +205,7 @@ async function onScanSuccess(decodedText){
     await carregarHistorico();
 }
 
-// --- CARREGAR HISTÓRICO ---
+// --- CARREGAR HISTÓRICO COM HORAS EXTRAS/ATRASOS ---
 async function carregarHistorico(admin=false){
     const id = localStorage.getItem('usuarioID');
     const tabela = document.getElementById('tabelaPontos');
@@ -200,7 +217,6 @@ async function carregarHistorico(admin=false){
     if(!admin) historico = historico.filter(r=>r.id===id);
 
     tabela.innerHTML='';
-
     const registrosPorDia = {};
     historico.forEach(reg=>{
         const key = reg.id+'_'+reg.data;
@@ -208,20 +224,29 @@ async function carregarHistorico(admin=false){
         registrosPorDia[key].push(reg);
     });
 
+    const horasPorColaborador = {};
+
     for(let key in registrosPorDia){
         const regs = registrosPorDia[key];
         let totalHoras = 0;
-        for(let i=0;i<regs.length;i++){
-            if(regs[i].tipo==='entrada' && regs[i+1] && regs[i+1].tipo==='saida'){
-                totalHoras += (new Date(regs[i+1].hora)-new Date(regs[i].hora))/3600000;
+        regs.forEach((reg,i)=>{
+            if(reg.tipo==='entrada' && regs[i+1] && regs[i+1].tipo==='saida'){
+                totalHoras += (new Date(regs[i+1].hora)-new Date(reg.hora))/3600000;
             }
-        }
+        });
         regs.forEach(reg=>{
             const tr=document.createElement('tr');
-            tr.innerHTML=`<td>${reg.nome}</td><td>${reg.tipo}</td><td>${reg.data}</td><td>${new Date(reg.hora).toLocaleTimeString()}</td><td>${totalHoras.toFixed(2)}</td>`;
+            let alerta='';
+            if(totalHoras<8) alerta=`<span class="alert atraso">Atraso</span>`;
+            if(totalHoras>8) alerta=`<span class="alert extra">Extra</span>`;
+            tr.innerHTML=`<td>${reg.nome}</td><td>${reg.tipo}</td><td>${reg.data}</td><td>${new Date(reg.hora).toLocaleTimeString()}</td><td>${totalHoras.toFixed(2)}</td><td>${alerta}</td>`;
             tabela.appendChild(tr);
         });
+        const nomeColab = regs[0].nome;
+        horasPorColaborador[nomeColab] = (horasPorColaborador[nomeColab] || 0) + totalHoras;
     }
+
+    atualizarGrafico(horasPorColaborador);
 }
 
 // --- EXPORTAR EXCEL ---
@@ -250,6 +275,24 @@ async function exportarExcel(){
 // --- MOSTRAR TODOS COLABORADORES ---
 async function mostrarTodosColaboradores(){
     await carregarHistorico(true);
+}
+
+// --- GRÁFICO ---
+function atualizarGrafico(horasPorColaborador){
+    const ctx = document.getElementById('graficoHoras').getContext('2d');
+    if(chart) chart.destroy();
+    chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(horasPorColaborador),
+            datasets: [{
+                label: 'Horas Trabalhadas',
+                data: Object.values(horasPorColaborador),
+                backgroundColor: 'rgba(54, 162, 235, 0.6)'
+            }]
+        },
+        options: { scales: { y: { beginAtZero: true } } }
+    });
 }
 
 // Inicializa dashboard se já estiver logado
