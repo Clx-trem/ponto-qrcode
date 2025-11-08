@@ -1,289 +1,190 @@
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Ponto Eletrônico</title>
-
-<!-- XLSX -->
-<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
-<!-- QRCode.js -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Ponto Eletrônico - QR Code</title>
 <style>
-body { font-family: Arial, sans-serif; margin:20px; }
-table { width: 100%; border-collapse: collapse; margin-bottom:20px; }
-th, td { border: 1px solid #ccc; padding: 5px; text-align:left; }
-th { background:#f3f4f6; }
-button { margin:2px; }
-.hidden { display:none; }
-.small { font-size:0.8em; color:#555; }
+/* SEU CSS EXISTENTE (mantido) */
+:root{ --blue:#0b4f78; --green:#2e9b4f; --yellow:#ffb739; --red:#ef5350; --muted:#6b7280; --card:#ffffff; --bg:#f4f7fb; }
+body{font-family:Inter, system-ui, -apple-system, Arial, sans-serif;background:var(--bg);margin:0;color:#111}
+header{background:linear-gradient(90deg,var(--blue),#0f6b96);color:#fff;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.logo{font-weight:700;font-size:18px}
+#clock{font-weight:700}
+.controls{display:flex;gap:8px;align-items:center}
+button{padding:8px 12px;border:none;border-radius:8px;cursor:pointer;font-weight:600}
+.add{background:var(--green);color:#fff}
+.secondary{background:#e5e7eb;color:#111}
+.download{background:var(--yellow);color:#111}
+.danger{background:var(--red);color:#fff}
+main{padding:20px;max-width:1100px;margin:20px auto}
+.search{width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;margin-bottom:14px}
+table{width:100%;border-collapse:collapse;background:var(--card);border-radius:10px;overflow:hidden;box-shadow:0 6px 24px rgba(15,23,42,0.06);margin-bottom:18px}
+th,td{padding:10px;border-bottom:1px solid #eef2f6;text-align:left;font-size:14px}
+th{background:#fbfdfe;font-weight:700}
+tr:hover td{background:#fcfdff}
+.small{font-size:13px;color:var(--muted);margin-left:6px}
+.muted{color:var(--muted);font-size:13px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:999}
+.modal-content{background:#fff;padding:18px;border-radius:10px;width:95%;max-width:720px;box-shadow:0 10px 40px rgba(2,6,23,0.12)}
+.hidden{display:none}
+.flex-row{display:flex;gap:8px;align-items:center}
+@media(max-width:720px){ header{flex-direction:column;align-items:flex-start} .controls{width:100%;justify-content:space-between} table{font-size:13px} }
+/* QR Code container */
+#qrcodeContainer{margin-top:12px;}
 </style>
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.7/minified/html5-qrcode.min.js"></script>
 </head>
 <body>
-
-<h1>Ponto Eletrônico</h1>
-
-<button id="addColabBtn">Adicionar Colaborador</button>
-<button id="limparTodosColabsBtn">Apagar todos colaboradores</button>
-<button id="limparTodosPontosBtn">Apagar todos pontos</button>
-<button id="baixarBtn">Exportar Excel</button>
-
-<table>
-  <thead>
-    <tr>
-      <th>#</th><th>ID</th><th>Nome</th><th>Cargo</th><th>Matrícula / Email</th><th>Turno</th><th>QR Code</th><th>Ações</th>
-    </tr>
-  </thead>
-  <tbody id="colabBody"></tbody>
-</table>
-
-<h2>Entradas</h2>
-<table>
-  <thead><tr><th>#</th><th>ID Colab</th><th>Nome</th><th>Data</th><th>Hora</th><th>Ações</th></tr></thead>
-  <tbody id="entradasBody"></tbody>
-</table>
-
-<h2>Saídas</h2>
-<table>
-  <thead><tr><th>#</th><th>ID Colab</th><th>Nome</th><th>Data</th><th>Hora</th><th>Ações</th></tr></thead>
-  <tbody id="saidasBody"></tbody>
-</table>
-
-<h2>Horas Trabalhadas (mês atual)</h2>
-<table>
-  <thead><tr><th>Colaborador</th><th>Data</th><th>Horas</th></tr></thead>
-  <tbody id="horasBody"></tbody>
-  <tfoot><tr><td><b>Total</b></td><td></td><td id="totalHoras"></td></tr></tfoot>
-</table>
-
-<!-- Modal Adicionar/Editar -->
-<div id="colabModal" class="hidden" style="position:fixed;top:10%;left:50%;transform:translateX(-50%);background:#fff;padding:20px;border:1px solid #ccc;">
-  <h3 id="colabModalTitle">Adicionar Colaborador</h3>
-  <label>Nome: <input id="nomeInput"></label><br>
-  <label>Cargo: <input id="cargoInput"></label><br>
-  <label>Matrícula: <input id="matriculaInput"></label><br>
-  <label>Email: <input id="emailInput"></label><br>
-  <label>Turno: <input id="turnoInput"></label><br><br>
-  <button id="saveColab">Salvar</button>
-  <button id="cancelColab">Cancelar</button>
+<!-- LOGIN -->
+<div id="loginScreen" style="position:fixed;inset:0;background:var(--blue);display:flex;align-items:center;justify-content:center;z-index:9999">
+<div style="background:#fff;padding:26px;border-radius:10px;width:92%;max-width:360px;text-align:center">
+<h2 style="margin:0 0 8px 0;color:var(--blue)">Login do Sistema</h2>
+<input id="user" placeholder="Usuário" style="width:92%;padding:10px;margin:8px 0;border-radius:6px;border:1px solid #e5e7eb"><br>
+<input id="pass" type="password" placeholder="Senha" style="width:92%;padding:10px;margin:8px 0;border-radius:6px;border:1px solid #e5e7eb"><br>
+<label style="font-size:13px"><input type="checkbox" id="remember"> Lembrar login</label><br>
+<button id="loginBtn" class="add" style="width:92%;margin-top:10px">Entrar</button>
+<p id="loginMsg" style="color:crimson;margin-top:8px;height:18px"></p>
 </div>
-
-<script>
-// ----------- VARIÁVEIS E ESTADO -----------
+</div>
+<header>
+<div style="display:flex;gap:12px;align-items:center">
+<div class="logo">Ponto Eletrônico</div>
+<div id="status" class="muted">Offline • Local Storage</div>
+</div>
+<div style="display:flex;gap:12px;align-items:center">
+<div id="clock">--:--:--</div>
+<div class="controls">
+<button class="download" id="baixarBtn">Baixar Planilhas (mês atual)</button>
+<button class="download" id="gerarRelatorioBtn">Relatório Horas (mês atual)</button>
+<button class="secondary" id="limparTodosPontosBtn">Limpar Pontos</button>
+<button class="secondary" id="limparTodosColabsBtn">Apagar Todos Colaboradores</button>
+<button class="secondary" id="logoutBtn">Sair</button>
+</div>
+</div>
+</header>
+<main id="mainApp" class="hidden">
+<div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">
+<label>Colaborador: <select id="colabSelect" style="padding:8px;border-radius:6px;border:1px solid #d1d5db"></select></label>
+<button class="secondary" id="verRelatorioColabBtn">Ver Relatório Colaborador</button>
+<button class="download" id="exportRelatorioColabBtn">Exportar Relatório Colaborador</button>
+</div>
+<input id="search" class="search" placeholder="🔍 Pesquisar colaborador">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px">
+<h3>Colaboradores</h3>
+<div style="display:flex;gap:8px">
+<button class="add" id="addColabBtn">Adicionar Colaborador</button>
+</div>
+</div>
+<table id="colabTable">
+<thead><tr><th>#</th><th>ID</th><th>Nome</th><th>Cargo</th><th>Matrícula / E-mail</th><th>Turno</th><th>QR Code</th><th>Ações</th></tr></thead>
+<tbody id="colabBody"></tbody>
+</table>
+<h3>Entradas Registradas (mês atual)</h3>
+<table id="entradasTable">
+<thead><tr><th>#</th><th>ID Colab</th><th>Nome</th><th>Data</th><th>Hora</th><th>Ações</th></tr></thead>
+<tbody id="entradasBody"></tbody>
+</table>
+<h3>Saídas Registradas (mês atual)</h3>
+<table id="saidasTable">
+<thead><tr><th>#</th><th>ID Colab</th><th>Nome</th><th>Data</th><th>Hora</th><th>Ações</th></tr></thead>
+<tbody id="saidasBody"></tbody>
+</table>
+<h3>Leitura de QR Code</h3>
+<div id="qrReader" style="width:300px;"></div>
+<p id="qrResult"></p>
+</main>
+<script type="module">
+/* ---------- DADOS E ESTADO ---------- */
 let colaboradores = [];
 let pontos = [];
 let colabEmEdicao = null;
-let filtroAtual = 'Atual'; // pode ser usado no Excel
+let scanQRLeitura = {};
 
-// Mock temPermissao (substitua com sua lógica real)
-function temPermissao(acao) { return true; }
-
-// ----------- UTILIDADES -----------
-function formatarHorasSegundos(totalSegundos) {
-  totalSegundos = Math.max(0, Math.round(totalSegundos));
-  const horas = Math.floor(totalSegundos / 3600);
-  const minutos = Math.floor((totalSegundos % 3600) / 60);
-  const segundos = totalSegundos % 60;
-  return `${horas}h ${minutos}m ${segundos}s`;
-}
-
-function pontosDoMesAtual(pArray) {
-  const hoje = new Date();
-  const ano = String(hoje.getFullYear());
-  const mes = String(hoje.getMonth()+1).padStart(2,'0');
-  return pArray.filter(p => {
-    const [d,m,a] = p.data.split('/');
-    return a === ano && m === mes;
-  });
-}
-
-// ----------- RENDER COLABORADORES -----------
+/* ---------- FUNÇÕES DE RENDER ---------- */
 function renderColaboradores(filtro='') {
-  const body = document.getElementById('colabBody');
-  body.innerHTML = '';
-  colaboradores
-    .slice()
-    .sort((a,b) => (a.nome||'').localeCompare(b.nome||''))
-    .filter(c => (c.nome||'').toLowerCase().includes(filtro.toLowerCase()) || (c.cargo||'').toLowerCase().includes(filtro.toLowerCase()))
-    .forEach((c,i)=>{
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${i+1}</td>
-        <td>${c.id}</td>
-        <td>${c.nome||''}</td>
-        <td>${c.cargo||''}</td>
-        <td>${c.matricula||''} <span class="small">${c.email||''}</span></td>
-        <td>${c.turno||''}</td>
-        <td id="qrcode-${c.id}"></td>
-        <td>
-          <button class="add btnEntrada">Entrada</button>
-          <button class="secondary btnSaida">Saída</button>
-          <button class="secondary editBtn">Editar</button>
-          <button class="danger delBtn">Excluir</button>
-        </td>
-      `;
-
-      // QR Code fixo = 2
-      new QRCode(tr.querySelector(`#qrcode-${c.id}`), {text:"2", width:60, height:60});
-
-      tr.querySelector('.btnEntrada').onclick = ()=>registrarPonto(c.id,'Entrada');
-      tr.querySelector('.btnSaida').onclick = ()=>registrarPonto(c.id,'Saída');
-      tr.querySelector('.editBtn').onclick = ()=>abrirModalEditar(c);
-      tr.querySelector('.delBtn').onclick = ()=>removerColab(c.id);
-
-      body.appendChild(tr);
-    });
+ const body = document.getElementById('colabBody');
+ body.innerHTML='';
+ colaboradores.slice().sort((a,b)=>(a.nome||'').localeCompare(b.nome||'')).filter(c=> (c.nome||'').toLowerCase().includes(filtro.toLowerCase()) || (c.cargo||'').toLowerCase().includes(filtro.toLowerCase()) ).forEach((c,i)=>{
+ const tr=document.createElement('tr');
+ tr.innerHTML=`
+ <td>${i+1}</td>
+ <td>${c.id}</td>
+ <td>${c.nome||''}</td>
+ <td>${c.cargo||''}</td>
+ <td>${c.matricula||''} <span class="small">${c.email||''}</span></td>
+ <td>${c.turno||''}</td>
+ <td><div id="qrcode_${c.id}" style="width:60px;height:60px"></div></td>
+ <td>
+ <button class="add btnEntrada">Entrada</button>
+ <button class="secondary btnSaida">Saída</button>
+ <button class="secondary editBtn">Editar</button>
+ <button class="danger delBtn">Excluir</button>
+ </td>
+ `;
+ tr.querySelector('.btnEntrada').onclick=()=> registrarPonto(c.id,'Entrada');
+ tr.querySelector('.btnSaida').onclick=()=> registrarPonto(c.id,'Saída');
+ tr.querySelector('.editBtn').onclick=()=> abrirModalEditar(c);
+ tr.querySelector('.delBtn').onclick=()=> removerColab(c.id);
+ body.appendChild(tr);
+ // gerar QRCode com valor id do colaborador
+ QRCode.toCanvas(document.getElementById(`qrcode_${c.id}`), c.id, {width:60});
+ });
 }
 
-// ----------- CRUD COLABORADORES -----------
-function abrirModalAdicionar(){
-  colabEmEdicao=null;
-  document.getElementById('colabModalTitle').textContent='Adicionar Colaborador';
-  ['nomeInput','cargoInput','matriculaInput','emailInput','turnoInput'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('colabModal').classList.remove('hidden');
-}
-
-function abrirModalEditar(c){
-  colabEmEdicao=c;
-  document.getElementById('colabModalTitle').textContent='Editar Colaborador';
-  document.getElementById('nomeInput').value=c.nome||'';
-  document.getElementById('cargoInput').value=c.cargo||'';
-  document.getElementById('matriculaInput').value=c.matricula||'';
-  document.getElementById('emailInput').value=c.email||'';
-  document.getElementById('turnoInput').value=c.turno||'';
-  document.getElementById('colabModal').classList.remove('hidden');
-}
-
-document.getElementById('cancelColab').onclick = ()=>document.getElementById('colabModal').classList.add('hidden');
-
-document.getElementById('saveColab').onclick = ()=>{
-  const nome = document.getElementById('nomeInput').value.trim();
-  if(!nome) return alert('Informe o nome do colaborador');
-  const obj = {
-    nome,
-    cargo:document.getElementById('cargoInput').value.trim(),
-    matricula:document.getElementById('matriculaInput').value.trim(),
-    email:document.getElementById('emailInput').value.trim(),
-    turno:document.getElementById('turnoInput').value.trim()
-  };
-  if(colabEmEdicao){ // editar
-    Object.assign(colabEmEdicao,obj);
-  } else { // novo
-    obj.id = Date.now().toString();
-    colaboradores.push(obj);
-  }
-  document.getElementById('colabModal').classList.add('hidden');
-  renderColaboradores();
-  renderEntradasSaidas();
-};
-
-// ----------- PONTO -----------
+/* ---------- REGISTRAR PONTO ---------- */
 function registrarPonto(idColab,tipo){
-  const c = colaboradores.find(x=>x.id===idColab);
-  if(!c) return alert("Colaborador não encontrado!");
-  const now = new Date();
-  const p = {id:Date.now().toString(),idColab,nome:c.nome,matricula:c.matricula,email:c.email,tipo,data:now.toLocaleDateString('pt-BR'),hora:now.toLocaleTimeString('pt-BR',{hour12:false}),horarioISO:now.toISOString()};
-  pontos.push(p);
-  renderEntradasSaidas();
+ const c = colaboradores.find(x=>x.id===idColab);
+ if(!c) return alert('Colaborador não encontrado!');
+ const now=new Date();
+ const p={id:Date.now().toString(),idColab,nome:c.nome,matricula:c.matricula,email:c.email,tipo,data:now.toLocaleDateString('pt-BR'),hora:now.toLocaleTimeString('pt-BR',{hour12:false}),horarioISO:now.toISOString()};
+ pontos.push(p);
+ renderEntradasSaidas();
 }
 
-// ----------- RENDER ENTRADAS / SAÍDAS -----------
+/* ---------- ENTRADAS/SAÍDAS ---------- */
 function renderEntradasSaidas(){
-  const entBody = document.getElementById('entradasBody');
-  const saiBody = document.getElementById('saidasBody');
-  entBody.innerHTML=''; saiBody.innerHTML='';
-  const pts = pontosDoMesAtual(pontos);
-  let eIdx=1, sIdx=1;
-  pts.filter(p=>p.tipo==='Entrada').forEach(p=>{
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${eIdx++}</td><td>${p.idColab}</td><td>${p.nome}</td><td>${p.data}</td><td>${p.hora}</td><td></td>`;
-    entBody.appendChild(tr);
-  });
-  pts.filter(p=>p.tipo==='Saída').forEach(p=>{
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${sIdx++}</td><td>${p.idColab}</td><td>${p.nome}</td><td>${p.data}</td><td>${p.hora}</td><td></td>`;
-    saiBody.appendChild(tr);
-  });
-  calcularHoras();
+ const entBody=document.getElementById('entradasBody');
+ const saiBody=document.getElementById('saidasBody');
+ entBody.innerHTML=''; saiBody.innerHTML='';
+ let eIdx=1,sIdx=1;
+ pontos.forEach(p=>{
+ if(p.tipo==='Entrada') entBody.innerHTML+=`<tr><td>${eIdx++}</td><td>${p.idColab}</td><td>${p.nome}</td><td>${p.data}</td><td>${p.hora}</td><td></td></tr>`;
+ if(p.tipo==='Saída') saiBody.innerHTML+=`<tr><td>${sIdx++}</td><td>${p.idColab}</td><td>${p.nome}</td><td>${p.data}</td><td>${p.hora}</td><td></td></tr>`;
+ });
 }
 
-// ----------- CALCULAR HORAS -----------
-function calcularHoras(){
-  const horasBody=document.getElementById('horasBody');
-  const totalHorasCell=document.getElementById('totalHoras');
-  horasBody.innerHTML='';
-  let dados={}; let totalGeralSegundos=0;
-  const pts = pontosDoMesAtual(pontos);
-  pts.forEach(p=>{
-    if(!dados[p.nome]) dados[p.nome]={};
-    if(!dados[p.nome][p.data]) dados[p.nome][p.data]=[];
-    dados[p.nome][p.data].push(p);
-  });
-  Object.keys(dados).forEach(nome=>{
-    Object.keys(dados[nome]).forEach(data=>{
-      const reg=dados[nome][data].slice().sort((a,b)=>new Date(a.horarioISO)-new Date(b.horarioISO));
-      let entrada=null, totalSegundosPorDia=0;
-      reg.forEach(r=>{
-        if(r.tipo==='Entrada') entrada=new Date(r.horarioISO);
-        else if(r.tipo==='Saída' && entrada){
-          const diffSeg=Math.round((new Date(r.horarioISO)-entrada)/1000);
-          if(diffSeg>0) totalSegundosPorDia+=diffSeg;
-          entrada=null;
-        }
-      });
-      totalGeralSegundos+=totalSegundosPorDia;
-      const tr=document.createElement('tr');
-      tr.innerHTML=`<td>${nome}</td><td>${data}</td><td>${formatarHorasSegundos(totalSegundosPorDia)}</td>`;
-      horasBody.appendChild(tr);
-    });
-  });
-  totalHorasCell.textContent=formatarHorasSegundos(totalGeralSegundos);
+/* ---------- QR CODE SCANNER ---------- */
+function iniciarQRCodeScanner(){
+ const html5QrCode = new Html5Qrcode("qrReader");
+ html5QrCode.start({facingMode:"environment"},
+ {fps:10, qrbox:250},
+ (decodedText,decodedResult)=>{
+ document.getElementById('qrResult').innerText=`QR Lido: ${decodedText}`;
+ const colab = colaboradores.find(c=>c.id===decodedText);
+ if(!colab) return;
+ // alternar entrada/saida ao bater via QR
+ const last = scanQRLeitura[decodedText];
+ const tipo = last==='Entrada'?'Saída':'Entrada';
+ scanQRLeitura[decodedText]=tipo;
+ registrarPonto(decodedText,tipo);
+ }
+ ).catch(err=>console.warn(err));
 }
 
-// ----------- REMOVER COLABORADOR -----------
-function removerColab(id){
-  if(confirm("Excluir colaborador permanentemente?")){
-    colaboradores = colaboradores.filter(c=>c.id!==id);
-    pontos = pontos.filter(p=>p.idColab!==id);
-    renderColaboradores();
-    renderEntradasSaidas();
-  }
+/* ---------- INICIALIZAÇÃO ---------- */
+function inicializar(){
+ // EXEMPLO DE DADOS
+ colaboradores=[
+ {id:'1',nome:'Carlos',cargo:'Dev',matricula:'001',email:'carlos@ex.com',turno:'Manhã'},
+ {id:'2',nome:'Ana',cargo:'RH',matricula:'002',email:'ana@ex.com',turno:'Tarde'}
+ ];
+ renderColaboradores();
+ renderEntradasSaidas();
+ iniciarQRCodeScanner();
 }
-
-// ----------- BOTÕES GLOBAIS -----------
-document.getElementById('addColabBtn').onclick = abrirModalAdicionar;
-document.getElementById('limparTodosColabsBtn').onclick = ()=>{
-  if(confirm("Apagar TODOS os colaboradores e pontos?")){
-    colaboradores=[]; pontos=[];
-    renderColaboradores();
-    renderEntradasSaidas();
-  }
-};
-document.getElementById('limparTodosPontosBtn').onclick = ()=>{
-  if(confirm("Apagar todos os pontos?")){
-    pontos=[];
-    renderEntradasSaidas();
-  }
-};
-
-// ----------- EXPORT EXCEL -----------
-document.getElementById('baixarBtn').onclick=()=>{
-  const ptsMes = pontosDoMesAtual(pontos);
-  const entradas = [['#','ID Colab','Nome','Data','Hora']];
-  const saidas = [['#','ID Colab','Nome','Data','Hora']];
-  ptsMes.forEach((p,i)=>{
-    if(p.tipo==='Entrada') entradas.push([i+1,p.idColab,p.nome,p.data,p.hora]);
-    else saidas.push([i+1,p.idColab,p.nome,p.data,p.hora]);
-  });
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(entradas),'Entradas');
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(saidas),'Saídas');
-  XLSX.writeFile(wb, `Pontos_${filtroAtual}.xlsx`);
-};
-
-// ----------- INICIALIZAÇÃO -----------
-renderColaboradores();
-renderEntradasSaidas();
+window.onload=inicializar;
 </script>
 </body>
 </html>
