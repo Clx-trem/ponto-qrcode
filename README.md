@@ -37,65 +37,7 @@ tr:hover td{background:#fcfdff}
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.7/minified/html5-qrcode.min.js"></script>
 </head>
 <body>
-<!-- LOGIN -->
-<div id="loginScreen" style="position:fixed;inset:0;background:var(--blue);display:flex;align-items:center;justify-content:center;z-index:9999">
-<div style="background:#fff;padding:26px;border-radius:10px;width:92%;max-width:360px;text-align:center">
-<h2 style="margin:0 0 8px 0;color:var(--blue)">Login do Sistema</h2>
-<input id="user" placeholder="Usuário" style="width:92%;padding:10px;margin:8px 0;border-radius:6px;border:1px solid #e5e7eb"><br>
-<input id="pass" type="password" placeholder="Senha" style="width:92%;padding:10px;margin:8px 0;border-radius:6px;border:1px solid #e5e7eb"><br>
-<label style="font-size:13px"><input type="checkbox" id="remember"> Lembrar login</label><br>
-<button id="loginBtn" class="add" style="width:92%;margin-top:10px">Entrar</button>
-<p id="loginMsg" style="color:crimson;margin-top:8px;height:18px"></p>
-</div>
-</div>
-<header>
-<div style="display:flex;gap:12px;align-items:center">
-<div class="logo">Ponto Eletrônico</div>
-<div id="status" class="muted">Offline • Local Storage</div>
-</div>
-<div style="display:flex;gap:12px;align-items:center">
-<div id="clock">--:--:--</div>
-<div class="controls">
-<button class="download" id="baixarBtn">Baixar Planilhas (mês atual)</button>
-<button class="download" id="gerarRelatorioBtn">Relatório Horas (mês atual)</button>
-<button class="secondary" id="limparTodosPontosBtn">Limpar Pontos</button>
-<button class="secondary" id="limparTodosColabsBtn">Apagar Todos Colaboradores</button>
-<button class="secondary" id="logoutBtn">Sair</button>
-</div>
-</div>
-</header>
-<main id="mainApp" class="hidden">
-<div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">
-<label>Colaborador: <select id="colabSelect" style="padding:8px;border-radius:6px;border:1px solid #d1d5db"></select></label>
-<button class="secondary" id="verRelatorioColabBtn">Ver Relatório Colaborador</button>
-<button class="download" id="exportRelatorioColabBtn">Exportar Relatório Colaborador</button>
-</div>
-<input id="search" class="search" placeholder="🔍 Pesquisar colaborador">
-<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px">
-<h3>Colaboradores</h3>
-<div style="display:flex;gap:8px">
-<button class="add" id="addColabBtn">Adicionar Colaborador</button>
-</div>
-</div>
-<table id="colabTable">
-<thead><tr><th>#</th><th>ID</th><th>Nome</th><th>Cargo</th><th>Matrícula / E-mail</th><th>Turno</th><th>QR Code</th><th>Ações</th></tr></thead>
-<tbody id="colabBody"></tbody>
-</table>
-<h3>Entradas Registradas (mês atual)</h3>
-<table id="entradasTable">
-<thead><tr><th>#</th><th>ID Colab</th><th>Nome</th><th>Data</th><th>Hora</th><th>Ações</th></tr></thead>
-<tbody id="entradasBody"></tbody>
-</table>
-<h3>Saídas Registradas (mês atual)</h3>
-<table id="saidasTable">
-<thead><tr><th>#</th><th>ID Colab</th><th>Nome</th><th>Data</th><th>Hora</th><th>Ações</th></tr></thead>
-<tbody id="saidasBody"></tbody>
-</table>
-<h3>Leitura de QR Code</h3>
-<div id="qrReader" style="width:300px;"></div>
-<p id="qrResult"></p>
-</main>
-<script type="module">
+
 /* ---------- DADOS E ESTADO ---------- */
 let colaboradores = [];
 let pontos = [];
