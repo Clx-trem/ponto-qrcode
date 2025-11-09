@@ -93,15 +93,18 @@ window.firebaseApp = { db, collection, addDoc, getDocs, query, orderBy };
 <!-- DASHBOARD -->
 <div class="dashboard-container" id="dashboardDiv" style="display:none;">
     <h1>Bem-vindo, <span id="nomeUsuario"></span> (ID: <span id="idUsuario"></span>)</h1>
+
     <div id="adminButtons" style="display:none;">
         <button onclick="mostrarTodosColaboradores()">Ver Todos Colaboradores</button>
     </div>
+
     <div id="userButtons">
         <h3>Bater ponto via QR Code</h3>
         <div id="reader" style="width:300px;"></div>
         <div id="status"></div>
         <button onclick="exportarExcel()">Exportar para Excel</button>
     </div>
+
     <h2>Histórico de Pontos</h2>
     <table>
         <thead>
@@ -116,8 +119,10 @@ window.firebaseApp = { db, collection, addDoc, getDocs, query, orderBy };
         </thead>
         <tbody id="tabelaPontos"></tbody>
     </table>
+
     <h2>Gráfico de Horas</h2>
     <canvas id="graficoHoras"></canvas>
+
     <button onclick="logout()">Sair</button>
 </div>
 
