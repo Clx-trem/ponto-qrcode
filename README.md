@@ -70,24 +70,18 @@
     <!-- left column: admin tools -->
     <div class="card">
       <h3>Admin — Colaboradores</h3>
-
       <label class="small">Matrícula</label>
       <input id="colMatricula" placeholder="ex: 12345">
-
       <label class="small">Nome</label>
       <input id="colNome" placeholder="Nome completo">
-
       <label class="small">Foto (opcional)</label>
       <input id="colFoto" type="file" accept="image/*">
-
       <div class="actions">
         <button id="btnSalvarCol">Salvar / Atualizar</button>
         <button id="btnGerarQR">Gerar QR (preview)</button>
         <button id="btnLimpar">Limpar</button>
       </div>
-
       <div id="qrPreview" class="small" style="margin-top:10px"></div>
-
       <h4 style="margin-top:14px">Lista de colaboradores</h4>
       <div style="max-height:320px;overflow:auto">
         <table id="colTable">
@@ -96,7 +90,6 @@
         </table>
       </div>
     </div>
-
     <!-- right column: scanner, histórico, dashboard -->
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center">
@@ -106,14 +99,12 @@
           <button id="btnRefresh">Atualizar</button>
         </div>
       </div>
-
       <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-top:8px">
         <div style="min-width:300px">
           <h4 class="small">Bater ponto (QR Scanner)</h4>
           <div id="reader" style="width:300px"></div>
           <div id="scanStatus" class="small" style="margin-top:6px"></div>
         </div>
-
         <div style="flex:1">
           <h4 class="small">Histórico / Relatórios</h4>
           <table id="pontosTable">
@@ -122,7 +113,6 @@
           </table>
         </div>
       </div>
-
       <h4 style="margin-top:12px" class="small">Gráfico horas por colaborador</h4>
       <canvas id="chartHoras" height="120"></canvas>
     </div>
