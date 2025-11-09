@@ -1,76 +1,72 @@
-<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Ponto Eletrônico CLX (Firebase + QR)</title>
+<title>Gerenciador de Ponto — CLX</title>
 
-<!-- Bootstrap (visual igual) -->
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
+<!-- Visual (tema azul) -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
 <style>
-  body{background:#f4f6f9;font-family:Arial,Helvetica,sans-serif}
-  .navbar{background:#001f3f}
-  .navbar-brand{color:#fff;font-weight:700}
-  .card{border-radius:12px}
-  .btn-clx{background:#001f3f;color:#fff;border:none}
-  .qr-box img{width:160px}
-  .avatar{width:48px;height:48px;border-radius:6px;object-fit:cover}
-  .small-muted{font-size:13px;color:#6b7280}
-  @media (max-width:768px){ .layout{grid-template-columns:1fr} }
+  :root{--primary:#1e88e5;--muted:#6b7280}
+  body{background:#e9f4ff;font-family:Arial,Helvetica,sans-serif;margin:0;padding:18px}
+  .navbar{background:var(--primary);color:#fff;padding:12px;border-radius:8px}
+  .card{border-radius:10px;box-shadow:0 6px 20px rgba(2,6,23,0.06);background:#fff}
+  .small-muted{color:var(--muted);font-size:13px}
+  .avatar{width:44px;height:44px;border-radius:8px;object-fit:cover}
+  table th{background:var(--primary);color:#fff}
+  .qr-preview img{width:160px}
+  .btn-clx{background:var(--primary);color:#fff;border:none}
+  @media (max-width:900px){ .layout{flex-direction:column} }
 </style>
 </head>
 <body>
-<nav class="navbar mb-4 px-3">
-  <span class="navbar-brand">Ponto Eletrônico — CLX</span>
-</nav>
 
 <div class="container">
+  <div class="navbar mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+      <div><strong>Gerenciador de Ponto — CLX</strong></div>
+      <div class="small-muted">Scanner • Registro • Relatórios</div>
+    </div>
+  </div>
+
   <div class="row g-4">
-    <!-- Left: cadastro -->
+    <!-- Colaboradores / Gerar QR -->
     <div class="col-md-4">
-      <div class="card p-3 shadow-sm">
+      <div class="card p-3">
         <h5>Colaboradores</h5>
-        <label class="small-muted">Matrícula</label>
-        <input id="matriculaInput" class="form-control" placeholder="12345">
-        <label class="small-muted mt-2">Nome</label>
-        <input id="nomeInput" class="form-control" placeholder="Nome completo">
-        <label class="small-muted mt-2">Foto (opcional)</label>
-        <input id="fotoInput" type="file" class="form-control" accept="image/*">
-        <div class="d-grid gap-2 mt-3">
-          <button id="btnSalvarCol" class="btn btn-clx">Salvar / Atualizar</button>
-          <button id="btnGerarQR" class="btn btn-outline-secondary">Gerar QR (preview)</button>
-          <button id="btnLimpar" class="btn btn-light">Limpar</button>
+        <label class="small-muted">Pesquisar matrícula</label>
+        <input id="searchMat" class="form-control mb-2" placeholder="Digite matrícula e pressione Enter">
+        <div class="d-grid gap-2">
+          <button id="btnLoadCols" class="btn btn-clx">Carregar Colaboradores</button>
+          <button id="btnRefresh" class="btn btn-outline-secondary">Atualizar Histórico</button>
         </div>
-        <div id="qrPreview" class="qr-box text-center mt-3"></div>
-        <hr>
-        <h6 class="small-muted">Lista de colaboradores</h6>
-        <div style="max-height:280px; overflow:auto;">
+        <hr/>
+        <div style="max-height:300px;overflow:auto;margin-top:8px">
           <table class="table table-sm">
-            <thead><tr><th>Mat</th><th>Nome</th><th>Foto</th><th></th></tr></thead>
+            <thead><tr><th>Matr</th><th>Nome</th><th></th></tr></thead>
             <tbody id="colTable"></tbody>
           </table>
         </div>
+        <div id="qrPreview" class="qr-preview text-center mt-2"></div>
       </div>
     </div>
-    <!-- Right: painel + histórico -->
+    <!-- Painel: scanner + histórico + gráfico -->
     <div class="col-md-8">
-      <div class="card p-3 shadow-sm">
+      <div class="card p-3">
         <div class="d-flex justify-content-between align-items-center">
           <h5>Painel</h5>
           <div>
-            <button id="btnExport" class="btn btn-clx me-2">Exportar Excel</button>
-            <button id="btnReload" class="btn btn-light">Atualizar</button>
+            <button id="btnExport" class="btn btn-clx btn-sm me-2">Exportar Excel</button>
           </div>
         </div>
-        <div class="row mt-3">
+        <div class="row mt-3 layout">
           <div class="col-md-5">
-            <h6 class="small-muted">Bater ponto (QR Scanner)</h6>
+            <h6 class="small-muted">Bater ponto</h6>
             <div id="reader" style="width:100%;"></div>
             <div id="scanStatus" class="small-muted mt-2"></div>
           </div>
           <div class="col-md-7">
-            <h6 class="small-muted">Histórico</h6>
+            <h6 class="small-muted">Últimos registros</h6>
             <div style="max-height:300px; overflow:auto;">
               <table class="table table-sm">
                 <thead><tr><th>Colab</th><th>Tipo</th><th>Data</th><th>Hora</th><th>Lat,Lon</th><th>Horas</th></tr></thead>
@@ -80,26 +76,26 @@
           </div>
         </div>
         <h6 class="small-muted mt-3">Gráfico horas por colaborador</h6>
-        <canvas id="chartHoras" style="max-height:200px"></canvas>
+        <canvas id="chartHoras" height="120"></canvas>
       </div>
     </div>
-
   </div>
 </div>
 
-<!-- Libraries -->
+<!-- Libs -->
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<!-- Firebase setup and main -->
+<!-- Firebase + App logic -->
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js";
-  import { getFirestore, collection, doc, setDoc, getDoc, addDoc, getDocs, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-firestore.js";
-  import { getStorage, ref as sref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-storage.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import {
+    getFirestore, collection, doc, getDoc, setDoc, addDoc, getDocs, query, where, orderBy
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-  // ---------- CONFIGURE AQUI (já preenchida com sua config) ----------
+  // --- FIREBASE CONFIG (USE A SUA) ---
   const firebaseConfig = {
     apiKey: "AIzaSyCiZXZ9vW-4L471ej9jWg_1MAStD44pTqo",
     authDomain: "ponto-qrcode-29f9d.firebaseapp.com",
@@ -111,170 +107,139 @@
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
-  const storage = getStorage(app);
 
   // helpers
   const $ = id => document.getElementById(id);
-
-  // references
-  const colaboradoresColl = () => collection(db, 'colaboradores');
+  const colColl = () => collection(db, 'colaboradores');
   const pontosColl = () => collection(db, 'pontos');
 
   // state
   let scanner = null;
-  let chart = null;
   let lastScanAt = 0;
+  let chart = null;
 
-  // ---------- Colaboradores ----------
-  async function salvarColaborador(){
-    const matricula = $('matriculaInput').value.trim();
-    const nome = $('nomeInput').value.trim();
-    const file = $('fotoInput').files[0];
-
-    if(!matricula || !nome){ alert('Preencha matrícula e nome'); return; }
-
-    let fotoUrl = null;
-    if(file){
-      try{
-        const ref = sref(storage, `colaborador_fotos/${matricula}_${Date.now()}`);
-        const res = await uploadBytes(ref, file);
-        fotoUrl = await getDownloadURL(res.ref);
-      } catch(e){
-        console.error(e);
-        alert('Erro no upload da foto');
-        return;
-      }
-    } else {
-      // keep existing photo if any
-      try{
-        const snap = await getDoc(doc(db, 'colaboradores', matricula));
-        if(snap.exists() && snap.data().foto) fotoUrl = snap.data().foto;
-      }catch(e){}
-    }
-
-    try{
-      await setDoc(doc(db, 'colaboradores', matricula), { matricula, nome, foto: fotoUrl || null });
-      alert('Colaborador salvo');
-      $('matriculaInput').value=''; $('nomeInput').value=''; $('fotoInput').value='';
-      $('qrPreview').innerHTML = '';
-      await carregarColaboradores();
-    }catch(e){
-      console.error(e);
-      alert('Erro ao salvar colaborador');
-    }
-  }
-
-  async function carregarColaboradores(){
+  // --- carregar lista de colaboradores (limitado) ---
+  async function carregarColaboradores(term = '') {
     const tbody = $('colTable');
     tbody.innerHTML = '';
-    try{
-      const snap = await getDocs(query(colaboradoresColl(), orderBy('matricula')));
-      snap.forEach(docSnap => {
-        const d = docSnap.data();
+    try {
+      const snap = await getDocs(query(colColl(), orderBy('matricula')));
+      snap.forEach(s => {
+        const d = s.data();
+        // se termo informado, filtrar
+        if (term && !d.matricula.includes(term) && !d.nome.toLowerCase().includes(term.toLowerCase())) return;
         const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${d.matricula}</td>
-          <td>${d.nome}</td>
-          <td>${d.foto ? `<img src="${d.foto}" class="avatar">` : '—'}</td>
-          <td></td>
-        `;
-        const td = tr.children[3];
-
-        const btnEdit = document.createElement('button'); btnEdit.className='btn btn-sm btn-light me-1'; btnEdit.innerText='Editar';
-        btnEdit.onclick = ()=> { $('matriculaInput').value=d.matricula; $('nomeInput').value=d.nome; };
+        tr.innerHTML = `<td>${d.matricula}</td><td>${d.nome}</td><td></td>`;
+        const td = tr.children[2];
 
         const btnQR = document.createElement('button'); btnQR.className='btn btn-sm btn-outline-secondary me-1'; btnQR.innerText='QR';
-        btnQR.onclick = ()=> gerarQRPreview(d.matricula);
+        btnQR.onclick = () => gerarQRPreview(d.matricula);
 
-        const btnDel = document.createElement('button'); btnDel.className='btn btn-sm btn-danger'; btnDel.innerText='Excluir';
-        btnDel.onclick = async ()=> { if(!confirm('Excluir?')) return; await deleteDoc(doc(db,'colaboradores',d.matricula)); await carregarColaboradores(); };
+        const btnFill = document.createElement('button'); btnFill.className='btn btn-sm btn-light'; btnFill.innerText='Preencher';
+        btnFill.onclick = () => { $('searchMat').value = d.matricula; };
 
-        td.appendChild(btnEdit); td.appendChild(btnQR); td.appendChild(btnDel);
+        td.appendChild(btnQR);
+        td.appendChild(btnFill);
+
         tbody.appendChild(tr);
       });
-    }catch(e){
-      console.error(e);
+    } catch (e) {
+      console.error('Erro carregar colaboradores', e);
+      alert('Erro ao carregar colaboradores (veja console).');
     }
   }
 
-  function gerarQRPreview(matricula=null){
-    const m = matricula || $('matriculaInput').value.trim();
-    if(!m){ alert('Informe matrícula'); return; }
-    QRCode.toDataURL(m, { width:220 }).then(url => {
-      $('qrPreview').innerHTML = `<div style="text-align:center"><img src="${url}" /><div class="small-muted">${m}</div></div>`;
-    }).catch(err => { console.error(err); alert('Erro gerar QR'); });
+  // --- gerar QR preview ---
+  function gerarQRPreview(matricula) {
+    if (!matricula) { alert('Informe matrícula'); return; }
+    QRCode.toDataURL(matricula, { width: 200 }).then(url => {
+      $('qrPreview').innerHTML = `<div style="text-align:center"><img src="${url}" alt="QR"/><div class="small-muted">${matricula}</div></div>`;
+    }).catch(err => {
+      console.error(err);
+      alert('Erro ao gerar QR');
+    });
   }
 
-  // ---------- Scanner / Bater ponto ----------
-  function iniciarScanner(){
-    if(scanner) return;
+  // --- iniciar scanner ---
+  function iniciarScanner() {
+    if (scanner) return;
     scanner = new Html5Qrcode("reader");
     Html5Qrcode.getCameras().then(cameras => {
-      if(cameras && cameras.length){
-        scanner.start(cameras[0].id, { fps: 10, qrbox: 250 }, onScanSuccess).catch(err=>{
+      if (cameras && cameras.length) {
+        scanner.start(cameras[0].id, { fps: 10, qrbox: 250 }, onScanSuccess).catch(err => {
           $('scanStatus').innerText = 'Erro iniciar câmera: ' + err.message;
         });
       } else {
         $('scanStatus').innerText = 'Nenhuma câmera encontrada';
       }
-    }).catch(err=>{
+    }).catch(err => {
       $('scanStatus').innerText = 'Erro câmera: ' + err.message;
     });
   }
 
-  async function onScanSuccess(decodedText){
+  // --- quando QR lido ---
+  async function onScanSuccess(decodedText) {
     const now = Date.now();
-    if(now - lastScanAt < 1500) return; // debounce
+    if (now - lastScanAt < 1200) return; // debounce
     lastScanAt = now;
 
     const matricula = decodedText.trim();
-    $('scanStatus').innerText = `QR lido: ${matricula} — processando...`;
+    $('scanStatus').innerText = `QR lido: ${matricula} — verificando...`;
 
-    // buscar colaborador
-    let nome = matricula;
-    try{
-      const snap = await getDoc(doc(db, 'colaboradores', matricula));
-      if(snap.exists()) nome = snap.data().nome || matricula;
-    }catch(e){ console.error(e); }
+    try {
+      // buscar colaborador por campo 'matricula'
+      const q = query(colColl(), where('matricula', '==', matricula));
+      const snap = await getDocs(q);
+      if (snap.empty) {
+        $('scanStatus').innerText = '❌ Matrícula não encontrada';
+        return;
+      }
+      const colData = snap.docs[0].data();
+      const nome = colData.nome || matricula;
 
-    // busca última ação do usuário (descendente)
-    let ultimoTipo = null;
-    try{
-      const snapP = await getDocs(query(pontosColl(), orderBy('hora','desc')));
-      const arr = snapP.docs.map(d => d.data()).filter(p => p.id === matricula);
-      if(arr.length) ultimoTipo = arr[0].tipo;
-    }catch(e){ console.error(e); }
+      // buscar último ponto do usuário (desc)
+      const pontosSnap = await getDocs(query(pontosColl(), orderBy('hora', 'desc')));
+      const arr = pontosSnap.docs.map(d => d.data()).filter(p => p.id === matricula);
 
-    const tipo = (ultimoTipo === 'entrada') ? 'saida' : 'entrada';
+      let tipo = 'entrada';
+      if (arr.length && arr[0].tipo === 'entrada') tipo = 'saida';
 
-    // geolocalização (opcional)
-    let lat=null, lon=null;
-    try{
-      const pos = await new Promise((res, rej)=> navigator.geolocation.getCurrentPosition(res, rej, { timeout:5000 }));
-      lat = pos.coords.latitude; lon = pos.coords.longitude;
-    }catch(e){ /* ignore */ }
+      // tentar pegar localização (opcional)
+      let lat = null, lon = null;
+      try {
+        const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { timeout: 5000 }));
+        lat = pos.coords.latitude; lon = pos.coords.longitude;
+      } catch (e) { /* ignorar se sem permissão */ }
 
-    const agora = new Date();
-    const registro = { id: matricula, nome, tipo, data: agora.toLocaleDateString('pt-BR'), hora: agora.toISOString(), lat, lon };
+      const agora = new Date();
+      // salvar ponto
+      await addDoc(pontosColl(), {
+        id: matricula,
+        nome,
+        tipo,
+        data: agora.toLocaleDateString('pt-BR'),
+        hora: agora.toISOString(),
+        lat,
+        lon
+      });
 
-    try{
-      await addDoc(pontosColl(), registro);
-      $('scanStatus').innerText = `Ponto ${tipo} registrado: ${nome} às ${agora.toLocaleTimeString()}`;
-      await carregarHistorico();
-    }catch(e){
-      console.error(e);
-      $('scanStatus').innerText = 'Erro ao registrar ponto';
+      $('scanStatus').innerText = `✅ Ponto ${tipo} registrado: ${nome} às ${agora.toLocaleTimeString()}`;
+      carregarHistorico();
+    } catch (e) {
+      console.error('Erro registrar ponto', e);
+      $('scanStatus').innerText = 'Erro ao registrar ponto (veja console)';
     }
   }
 
-  // ---------- Histórico / cálculo ----------
-  async function carregarHistorico(){
+  // --- carregar histórico e calcular horas ---
+  async function carregarHistorico() {
     const tbody = $('histTable');
     tbody.innerHTML = '';
-    try{
-      const snap = await getDocs(query(pontosColl(), orderBy('hora','asc')));
+    try {
+      const snap = await getDocs(query(pontosColl(), orderBy('hora', 'asc')));
       const pontos = snap.docs.map(d => d.data());
 
+      // agrupar por id + data
       const grupos = {};
       pontos.forEach(p => {
         const key = `${p.id}|${p.data}`;
@@ -284,84 +249,85 @@
 
       const horasPor = {};
 
-      for(const key of Object.keys(grupos)){
-        const regs = grupos[key].sort((a,b) => new Date(a.hora) - new Date(b.hora));
+      for (const key of Object.keys(grupos)) {
+        const regs = grupos[key].sort((a, b) => new Date(a.hora) - new Date(b.hora));
         let total = 0;
-        for(let i=0;i<regs.length;i++){
-          if(regs[i].tipo==='entrada' && regs[i+1] && regs[i+1].tipo==='saida'){
-            total += (new Date(regs[i+1].hora) - new Date(regs[i].hora)) / 3600000;
+        for (let i = 0; i < regs.length; i++) {
+          if (regs[i].tipo === 'entrada' && regs[i + 1] && regs[i + 1].tipo === 'saida') {
+            total += (new Date(regs[i + 1].hora) - new Date(regs[i].hora)) / 3600000;
           }
         }
+
         regs.forEach(r => {
           const tr = document.createElement('tr');
-          tr.innerHTML = `<td>${r.nome}</td><td>${r.tipo}</td><td>${r.data}</td><td>${new Date(r.hora).toLocaleTimeString()}</td><td>${r.lat? r.lat.toFixed(4)+','+r.lon.toFixed(4): '—'}</td><td>${total.toFixed(2)}</td>`;
+          tr.innerHTML = `<td>${r.nome}</td><td>${r.tipo}</td><td>${r.data}</td><td>${new Date(r.hora).toLocaleTimeString()}</td><td>${r.lat? r.lat.toFixed(4)+','+r.lon.toFixed(4) : '—'}</td><td>${total.toFixed(2)}</td>`;
           tbody.appendChild(tr);
         });
+
         const nome = regs[0] ? regs[0].nome : '—';
         horasPor[nome] = (horasPor[nome] || 0) + total;
       }
 
       atualizarChart(horasPor);
-
-    }catch(e){
-      console.error(e);
-      alert('Erro carregar histórico (veja console)');
+    } catch (e) {
+      console.error('Erro carregar histórico', e);
+      alert('Erro ao carregar histórico. Veja console.');
     }
   }
 
-  // ---------- Export XLSX ----------
+  // --- exportar XLSX ---
   async function exportarExcel(){
     try{
       const snap = await getDocs(query(pontosColl(), orderBy('hora','asc')));
-      const pontos = snap.docs.map(d => d.data());
-      if(!pontos.length){ alert('Sem dados'); return; }
-      const sheet = pontos.map(p => ({
-        Colaborador: p.nome,
-        Matricula: p.id,
-        Tipo: p.tipo,
-        Data: p.data,
-        Hora: new Date(p.hora).toLocaleTimeString(),
-        Lat: p.lat || '',
-        Lon: p.lon || ''
+      const dados = snap.docs.map(d => d.data());
+      if(!dados.length){ alert('Sem dados para exportar'); return; }
+      const sheet = dados.map(r => ({
+        Colaborador: r.nome,
+        Matricula: r.id,
+        Tipo: r.tipo,
+        Data: r.data,
+        Hora: new Date(r.hora).toLocaleTimeString(),
+        Latitude: r.lat || '',
+        Longitude: r.lon || ''
       }));
       const ws = XLSX.utils.json_to_sheet(sheet);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Pontos');
       XLSX.writeFile(wb, `pontos_${new Date().toISOString().slice(0,10)}.xlsx`);
-    }catch(e){ console.error(e); alert('Erro exportar (veja console)'); }
+    }catch(e){
+      console.error('Erro exportar', e);
+      alert('Erro ao exportar (veja console).');
+    }
   }
 
-  // ---------- Chart ----------
-  function atualizarChart(obj){
-    const ctx = $('chartHoras').getContext('2d');
+  // --- chart ---
+  function atualizarChart(obj) {
+    const ctx = document.getElementById('chartHoras').getContext('2d');
     if(chart) chart.destroy();
     const labels = Object.keys(obj);
     const data = Object.values(obj);
     chart = new Chart(ctx, {
-      type:'bar',
-      data:{ labels, datasets:[{ label:'Horas', data, backgroundColor:'rgba(2,86,204,0.7)' }] },
-      options:{ responsive:true, scales:{ y:{ beginAtZero:true } } }
+      type: 'bar',
+      data: { labels, datasets: [{ label: 'Horas', data, backgroundColor: 'rgba(30,136,229,0.8)' }] },
+      options: { responsive:true, scales: { y: { beginAtZero:true } } }
     });
   }
 
-  // ---------- Init & bindings ----------
-  $('btnSalvarCol').addEventListener('click', salvarColaborador);
-  $('btnGerarQR').addEventListener('click', () => gerarQRPreview(null));
-  $('btnLimpar').addEventListener('click', () => { $('matriculaInput').value=''; $('nomeInput').value=''; $('fotoInput').value=''; $('qrPreview').innerHTML=''; });
-  $('btnExport').addEventListener('click', exportarExcel);
-  $('btnReload').addEventListener('click', carregarHistorico);
+  // --- bindings ---
+  $('btnLoadCols').addEventListener('click', ()=> carregarColaboradores());
+  $('btnRefresh').addEventListener('click', ()=> carregarHistorico());
+  $('btnExport').addEventListener('click', ()=> exportarExcel());
+  $('searchMat').addEventListener('keydown', (e)=> { if(e.key==='Enter') { e.preventDefault(); carregarColaboradores($('searchMat').value.trim()); } });
 
-  // expose small helper to console
-  window._clx = { carregarColaboradores, carregarHistorico, salvarColaborador, exportarExcel };
-
-  // startup
-  (async function start(){
+  // --- init ---
+  (async function init(){
     await carregarColaboradores();
     await carregarHistorico();
     iniciarScanner();
   })();
 
-  // end of module
+  // expose for debugging
+  window._ger = { carregarColaboradores, carregarHistorico, exportarExcel, gerarQRPreview, iniciarScanner };
 
 </script>
 </body>
